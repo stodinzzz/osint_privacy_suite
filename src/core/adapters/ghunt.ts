@@ -106,6 +106,21 @@ export class GHuntAdapter extends BaseAdapter {
 
       const accounts = this.parseStdout(execResult.stdout, email);
 
+      // Handle normal "target not found" without marking tool execution as a failure
+      const isNotFound =
+        execResult.stderr.includes("The target wasn't found") ||
+        execResult.stdout.includes("The target wasn't found");
+
+      if (isNotFound) {
+        context.onProgress?.('GHunt: Aucun profil Google public associé à cette adresse.', 100);
+        return this.createResult({
+          success: true,
+          durationMs: execResult.durationMs,
+          rawOutput: { stdout: execResult.stdout, stderr: execResult.stderr },
+          accounts: [],
+        });
+      }
+
       if (execResult.exitCode !== 0 && accounts.length === 0) {
         return this.createResult({
           success: false,
