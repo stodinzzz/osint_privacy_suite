@@ -9,6 +9,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp } from 'node:fs/promises';
 import { BaseAdapter, BaseAdapterOptions } from './base-adapter.js';
+import { BinaryResolver } from '../binary-resolver.js';
 import {
   SupportedTool,
   ToolExecutionContext,
@@ -22,7 +23,7 @@ export class MaigretAdapter extends BaseAdapter {
 
   constructor(options: BaseAdapterOptions = {}) {
     super({
-      binaryPath: options.binaryPath ?? `${os.homedir()}/.local/bin/maigret`,
+      binaryPath: BinaryResolver.resolveToolBinary('maigret', options.binaryPath),
       customRunner: options.customRunner,
       defaultTimeoutMs: options.defaultTimeoutMs ?? 60_000,
     });

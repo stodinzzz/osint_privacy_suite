@@ -7,6 +7,7 @@ import { existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { BaseAdapter, BaseAdapterOptions } from './base-adapter.js';
+import { BinaryResolver } from '../binary-resolver.js';
 import {
   SupportedTool,
   ToolExecutionContext,
@@ -21,7 +22,7 @@ export class GHuntAdapter extends BaseAdapter {
 
   constructor(options: BaseAdapterOptions & { sessionFilePath?: string } = {}) {
     super({
-      binaryPath: options.binaryPath ?? `${os.homedir()}/.local/bin/ghunt`,
+      binaryPath: BinaryResolver.resolveToolBinary('ghunt', options.binaryPath),
       customRunner: options.customRunner,
       defaultTimeoutMs: options.defaultTimeoutMs ?? 30_000,
     });

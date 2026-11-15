@@ -5,6 +5,7 @@ import os from 'node:os';
  */
 
 import { BaseAdapter, BaseAdapterOptions } from './base-adapter.js';
+import { BinaryResolver } from '../binary-resolver.js';
 import {
   SupportedTool,
   ToolExecutionContext,
@@ -24,7 +25,7 @@ export class IgnorantAdapter extends BaseAdapter {
 
   constructor(options: BaseAdapterOptions = {}) {
     super({
-      binaryPath: options.binaryPath ?? `${os.homedir()}/.local/bin/ignorant`,
+      binaryPath: BinaryResolver.resolveToolBinary('ignorant', options.binaryPath),
       customRunner: options.customRunner,
       defaultTimeoutMs: options.defaultTimeoutMs ?? 20_000,
     });

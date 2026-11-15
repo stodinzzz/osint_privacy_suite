@@ -5,6 +5,7 @@
 
 import crypto from 'node:crypto';
 import {
+  ExtendedTool,
   IToolAdapter,
   OrchestratorProgressEvent,
   OrchestratorResult,
@@ -19,62 +20,83 @@ import { IgnorantAdapter } from './adapters/ignorant.js';
 import { H8mailAdapter } from './adapters/h8mail.js';
 import { GHuntAdapter } from './adapters/ghunt.js';
 import { SpiderfootAdapter } from './adapters/spiderfoot.js';
+import { AhmiaAdapter } from './adapters/ahmia.js';
+import { XposedOrNotAdapter } from './adapters/xposedornot.js';
+import { HudsonRockAdapter } from './adapters/hudsonrock.js';
 import { Normalizer } from './normalizer.js';
 
 export type ProgressListener = (event: OrchestratorProgressEvent) => void;
 
 export interface OrchestratorOptions {
-  adapters?: Partial<Record<SupportedTool, IToolAdapter>>;
+  adapters?: Partial<Record<ExtendedTool, IToolAdapter>>;
   defaultToolTimeoutMs?: number;
 }
 
 export class ToolOrchestrator {
-  private adapters: Map<SupportedTool, IToolAdapter> = new Map();
+  private adapters: Map<ExtendedTool, IToolAdapter> = new Map();
+  private explicitAdapterKeys: Set<ExtendedTool> | null = null;
   private defaultToolTimeoutMs: number;
-  private activeScans: Map<string, { abortController: AbortController; tools?: SupportedTool[] }> = new Map();
+  private activeScans: Map<string, { abortController: AbortController; tools?: ExtendedTool[] }> = new Map();
 
   constructor(options: OrchestratorOptions = {}) {
     this.defaultToolTimeoutMs = options.defaultToolTimeoutMs ?? 60_000;
+    if (options.adapters && Object.keys(options.adapters).length > 0) {
+      this.explicitAdapterKeys = new Set(Object.keys(options.adapters) as ExtendedTool[]);
+    }
 
     // Register provided adapters or instantiate defaults
-    const defaultAdapters: Record<SupportedTool, IToolAdapter> = {
+    const defaultAdapters: Record<ExtendedTool, IToolAdapter> = {
       holehe: new HoleheAdapter(),
       maigret: new MaigretAdapter(),
       ignorant: new IgnorantAdapter(),
       h8mail: new H8mailAdapter(),
       ghunt: new GHuntAdapter(),
       spiderfoot: new SpiderfootAdapter(),
+      ahmia: new AhmiaAdapter(),
+      xposedornot: new XposedOrNotAdapter(),
+      hudsonrock: new HudsonRockAdapter(),
     };
 
     const finalAdapters = { ...defaultAdapters, ...options.adapters };
 
     for (const [toolName, adapter] of Object.entries(finalAdapters)) {
-      this.registerAdapter(toolName as SupportedTool, adapter);
+      this.registerAdapter(toolName as ExtendedTool, adapter);
     }
   }
 
   /**
    * Register or replace an adapter
    */
-  registerAdapter(name: SupportedTool, adapter: IToolAdapter): void {
+  registerAdapter(name: ExtendedTool, adapter: IToolAdapter): void {
     this.adapters.set(name, adapter);
   }
 
   /**
    * Get an adapter by name
    */
-  getAdapter(name: SupportedTool): IToolAdapter | undefined {
+  getAdapter(name: ExtendedTool): IToolAdapter | undefined {
     return this.adapters.get(name);
   }
 
   /**
-   * Check health of all registered tools
+   * Check health of all registered core CLI tools (or all tools if includeExtended is true)
    */
-  async checkAllHealth(): Promise<Record<SupportedTool, ToolHealth>> {
-    const results: Partial<Record<SupportedTool, ToolHealth>> = {};
+  async checkAllHealth(includeExtended = false): Promise<Record<ExtendedTool, ToolHealth>> {
+    const coreSet = new Set<ExtendedTool>([
+      'holehe',
+      'maigret',
+      'ignorant',
+      'h8mail',
+      'ghunt',
+      'spiderfoot',
+    ]);
+    const results: Partial<Record<ExtendedTool, ToolHealth>> = {};
     const promises: Promise<void>[] = [];
 
     for (const [name, adapter] of this.adapters.entries()) {
+      if (!includeExtended && !coreSet.has(name)) {
+        continue;
+      }
       promises.push(
         adapter
           .checkHealth()
@@ -91,7 +113,7 @@ export class ToolOrchestrator {
     }
 
     await Promise.all(promises);
-    return results as Record<SupportedTool, ToolHealth>;
+    return results as Record<ExtendedTool, ToolHealth>;
   }
 
   /**
@@ -133,7 +155,7 @@ export class ToolOrchestrator {
    */
   async runScan(
     targets: OrchestratorTargets,
-    selectedTools?: SupportedTool[],
+    selectedTools?: ExtendedTool[],
     onProgress?: ProgressListener
   ): Promise<OrchestratorResult> {
     const scanId = `scan_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
@@ -146,7 +168,7 @@ export class ToolOrchestrator {
     this.activeScans.set(scanId, { abortController, tools: toolsToRun });
 
     const emitEvent = (
-      tool: SupportedTool,
+      tool: ExtendedTool,
       status: 'queued' | 'running' | 'completed' | 'failed' | 'skipped',
       progress?: number,
       message?: string
@@ -166,7 +188,7 @@ export class ToolOrchestrator {
       emitEvent(tool, 'queued', 0, 'Waiting in execution queue');
     }
 
-    const toolResults: Partial<Record<SupportedTool, ToolResult>> = {};
+    const toolResults: Partial<Record<ExtendedTool, ToolResult>> = {};
 
     // Execute in parallel via Promise.allSettled
     const executionPromises = toolsToRun.map(async (tool) => {
@@ -282,9 +304,43 @@ export class ToolOrchestrator {
 
   private determineToolsToRun(
     targets: OrchestratorTargets,
-    selectedTools?: SupportedTool[]
-  ): SupportedTool[] {
-    const allTools: SupportedTool[] = [
+    selectedTools?: ExtendedTool[]
+  ): ExtendedTool[] {
+    const allTools: ExtendedTool[] = [
+      'holehe',
+      'maigret',
+      'ignorant',
+      'h8mail',
+      'ghunt',
+      'spiderfoot',
+      'ahmia',
+      'xposedornot',
+      'hudsonrock',
+    ];
+
+    if (selectedTools && selectedTools.length > 0) {
+      return selectedTools.filter((t) => allTools.includes(t));
+    }
+
+    // Default: choose tools matching provided targets
+    const candidates: ExtendedTool[] = [];
+    if (targets.email) {
+      candidates.push('holehe', 'h8mail', 'ghunt', 'spiderfoot', 'ahmia', 'xposedornot', 'hudsonrock');
+    }
+    if (targets.username) {
+      if (!candidates.includes('maigret')) candidates.push('maigret');
+      if (!candidates.includes('h8mail')) candidates.push('h8mail');
+      if (!candidates.includes('spiderfoot')) candidates.push('spiderfoot');
+      if (!candidates.includes('ahmia')) candidates.push('ahmia');
+      if (!candidates.includes('hudsonrock')) candidates.push('hudsonrock');
+    }
+    if (targets.phone) {
+      if (!candidates.includes('ignorant')) candidates.push('ignorant');
+      if (!candidates.includes('spiderfoot')) candidates.push('spiderfoot');
+      if (!candidates.includes('ahmia')) candidates.push('ahmia');
+    }
+
+    const coreTools: ExtendedTool[] = [
       'holehe',
       'maigret',
       'ignorant',
@@ -293,29 +349,14 @@ export class ToolOrchestrator {
       'spiderfoot',
     ];
 
-    if (selectedTools && selectedTools.length > 0) {
-      return selectedTools.filter((t) => allTools.includes(t));
-    }
+    const filteredCandidates = this.explicitAdapterKeys
+      ? candidates.filter((t) => this.explicitAdapterKeys!.has(t))
+      : candidates;
 
-    // Default: choose tools matching provided targets
-    const candidates: SupportedTool[] = [];
-    if (targets.email) {
-      candidates.push('holehe', 'h8mail', 'ghunt', 'spiderfoot');
-    }
-    if (targets.username) {
-      if (!candidates.includes('maigret')) candidates.push('maigret');
-      if (!candidates.includes('h8mail')) candidates.push('h8mail');
-      if (!candidates.includes('spiderfoot')) candidates.push('spiderfoot');
-    }
-    if (targets.phone) {
-      if (!candidates.includes('ignorant')) candidates.push('ignorant');
-      if (!candidates.includes('spiderfoot')) candidates.push('spiderfoot');
-    }
-
-    return candidates.length > 0 ? candidates : allTools;
+    return filteredCandidates.length > 0 ? filteredCandidates : coreTools;
   }
 
-  private isTargetEligible(tool: SupportedTool, targets: OrchestratorTargets): boolean {
+  private isTargetEligible(tool: ExtendedTool, targets: OrchestratorTargets): boolean {
     switch (tool) {
       case 'holehe':
         return Boolean(targets.email && targets.email.includes('@'));
@@ -329,6 +370,19 @@ export class ToolOrchestrator {
         return Boolean(targets.email && targets.email.includes('@'));
       case 'spiderfoot':
         return Boolean(targets.email || targets.username || targets.phone || targets.options?.domain);
+      case 'ahmia':
+        return Boolean(
+          (targets.email && targets.email.trim().length > 0) ||
+            (targets.username && targets.username.trim().length > 0) ||
+            (targets.phone && targets.phone.trim().length > 0)
+        );
+      case 'xposedornot':
+        return Boolean(targets.email && targets.email.includes('@'));
+      case 'hudsonrock':
+        return Boolean(
+          (targets.email && targets.email.includes('@')) ||
+            (targets.username && targets.username.trim().length > 0)
+        );
       default:
         return false;
     }

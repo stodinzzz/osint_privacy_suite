@@ -316,13 +316,32 @@ export function generateStandaloneHtmlReport(
             .filter(Boolean)
             .join(' ') || '<span class="text-muted">Non precise</span>';
 
+          const rawDetails = leak.details || 'Aucun detail complementaire';
+          const extraMetaParts: string[] = [];
+          if (leak.category === 'darkweb' || leak.category === 'darkweb_onion' || leak.sourceTool === 'ahmia') {
+            extraMetaParts.push('Index Dark Web Tor');
+            const onionRef = leak.metadata?.onionDomain || leak.metadata?.onionUrl;
+            if (onionRef) {
+              extraMetaParts.push(`Ressource Onion : ${onionRef}`);
+            }
+          } else if (leak.category === 'infostealer' || leak.sourceTool === 'hudsonrock') {
+            extraMetaParts.push(
+              `Alerte Infostealer${leak.metadata?.stealerFamily ? ` (${leak.metadata.stealerFamily})` : ''}`
+            );
+          } else if (leak.category === 'paste') {
+            extraMetaParts.push('Archive Paste publique');
+          }
+          const combinedDetails = extraMetaParts.length > 0
+            ? `${extraMetaParts.join(' | ')} : ${rawDetails}`
+            : rawDetails;
+
           return `
             <tr>
               <td><span class="badge badge-tool">${escapeHtml(leak.sourceTool || 'Manuel')}</span></td>
               <td><strong>${safeBreachName}</strong></td>
               <td>${leakDate}</td>
               <td>${dataClassesBadges}</td>
-              <td><span class="text-sm">${escapeHtml(leak.details || 'Aucun detail complementaire').replace(/[-–—]/g, ' ')}</span></td>
+              <td><span class="text-sm">${escapeHtml(combinedDetails).replace(/[-–—]/g, ' ')}</span></td>
             </tr>
           `;
         })

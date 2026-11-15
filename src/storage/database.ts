@@ -276,6 +276,9 @@ export function createStorageEngine(dbPath: string = ':memory:'): StorageEngine 
         breach_date TEXT,
         data_classes TEXT NOT NULL,
         details TEXT,
+        category TEXT,
+        severity TEXT,
+        metadata_json TEXT,
         created_at TEXT NOT NULL
     );
 
@@ -303,6 +306,20 @@ export function createStorageEngine(dbPath: string = ':memory:'): StorageEngine 
     CREATE INDEX IF NOT EXISTS idx_leaks_target ON discovered_leaks(target);
     CREATE INDEX IF NOT EXISTS idx_gdpr_account ON gdpr_requests(account_id);
   `);
+
+  try {
+    const cols = db.prepare('PRAGMA table_info(discovered_leaks)').all() as Array<{ name: string }>;
+    const colNames = new Set(cols.map((c) => c.name));
+    if (!colNames.has('category')) {
+      db.exec('ALTER TABLE discovered_leaks ADD COLUMN category TEXT;');
+    }
+    if (!colNames.has('severity')) {
+      db.exec('ALTER TABLE discovered_leaks ADD COLUMN severity TEXT;');
+    }
+    if (!colNames.has('metadata_json')) {
+      db.exec('ALTER TABLE discovered_leaks ADD COLUMN metadata_json TEXT;');
+    }
+  } catch {}
 
   let inTransaction = false;
   let isOpen = true;
@@ -526,8 +543,8 @@ export function createStorageEngine(dbPath: string = ':memory:'): StorageEngine 
         const stmt = db.prepare(`
           INSERT OR REPLACE INTO discovered_leaks (
             id, scan_id, target, source_tool, breach_name, breach_date,
-            data_classes, details, created_at
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            data_classes, details, category, severity, metadata_json, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
 
         const now = new Date().toISOString();
@@ -560,6 +577,14 @@ export function createStorageEngine(dbPath: string = ':memory:'): StorageEngine 
           }
 
           const details = leak.details ?? '';
+          const category = leak.category ?? null;
+          const severity = leak.severity ?? null;
+          const metadataJson =
+            leak.metadata && typeof leak.metadata === 'object'
+              ? JSON.stringify(leak.metadata)
+              : typeof leak.metadata_json === 'string'
+                ? leak.metadata_json
+                : null;
           const createdAt = leak.createdAt ?? leak.created_at ?? now;
 
           stmt.run(
@@ -571,6 +596,9 @@ export function createStorageEngine(dbPath: string = ':memory:'): StorageEngine 
             breachDate,
             JSON.stringify(dataClasses),
             details,
+            category,
+            severity,
+            metadataJson,
             createdAt
           );
         }
@@ -587,6 +615,14 @@ export function createStorageEngine(dbPath: string = ':memory:'): StorageEngine 
         } catch {
           dataClasses = r.data_classes ? [r.data_classes] : [];
         }
+        let parsedMeta: any = undefined;
+        if (r.metadata_json) {
+          try {
+            parsedMeta = JSON.parse(r.metadata_json);
+          } catch {
+            parsedMeta = undefined;
+          }
+        }
         return {
           id: r.id,
           target: r.target,
@@ -594,7 +630,10 @@ export function createStorageEngine(dbPath: string = ':memory:'): StorageEngine 
           breachName: r.breach_name,
           breachDate: r.breach_date ?? undefined,
           dataClasses,
-          details: r.details || ''
+          details: r.details || '',
+          ...(r.category ? { category: r.category } : {}),
+          ...(r.severity ? { severity: r.severity } : {}),
+          ...(parsedMeta ? { metadata: parsedMeta } : {}),
         };
       });
     },

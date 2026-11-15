@@ -8,6 +8,7 @@
 
 import type { ElectronAPI } from '../preload/index.js';
 import type {
+  ExtendedTool,
   SupportedTool,
   OrchestratorResult,
   OrchestratorProgressEvent,
@@ -38,13 +39,16 @@ let currentAccounts: DiscoveredAccountRecord[] = [];
 let currentResult: OrchestratorResult | null = null;
 let currentRiskResult: RiskScoreResult | null = null;
 let currentScanLeaks: UnifiedLeak[] = [];
-const toolProgressMap: Record<SupportedTool, { status: ToolStatus; progress: number; message: string }> = {
+const toolProgressMap: Record<ExtendedTool, { status: ToolStatus; progress: number; message: string }> = {
   holehe: { status: 'queued', progress: 0, message: 'En attente' },
   maigret: { status: 'queued', progress: 0, message: 'En attente' },
   ignorant: { status: 'queued', progress: 0, message: 'En attente' },
   h8mail: { status: 'queued', progress: 0, message: 'En attente' },
   ghunt: { status: 'queued', progress: 0, message: 'En attente' },
   spiderfoot: { status: 'queued', progress: 0, message: 'En attente' },
+  ahmia: { status: 'queued', progress: 0, message: 'En attente' },
+  xposedornot: { status: 'queued', progress: 0, message: 'En attente' },
+  hudsonrock: { status: 'queued', progress: 0, message: 'En attente' },
 };
 
 // Helper: Format date in French without hyphens (e.g. 08/11/2026 à 22:30)
@@ -280,10 +284,25 @@ function initView1(): void {
   const btnDeselectAll = document.getElementById('btn-deselect-all-tools');
 
   const toolCheckboxes = document.querySelectorAll<HTMLInputElement>('.tools-grid input[type="checkbox"]');
+  const darkwebToggleBtns = document.querySelectorAll<HTMLButtonElement>('.darkweb-toggle-card');
+
+  darkwebToggleBtns.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const isNowActive = !btn.classList.contains('active');
+      btn.classList.toggle('active', isNowActive);
+      btn.setAttribute('aria-pressed', isNowActive ? 'true' : 'false');
+      btn.style.opacity = isNowActive ? '1' : '0.5';
+    });
+  });
 
   if (btnSelectAll) {
     btnSelectAll.addEventListener('click', () => {
       toolCheckboxes.forEach((cb) => (cb.checked = true));
+      darkwebToggleBtns.forEach((btn) => {
+        btn.classList.add('active');
+        btn.setAttribute('aria-pressed', 'true');
+        btn.style.opacity = '1';
+      });
     });
   }
 
@@ -333,15 +352,40 @@ async function startUnifiedScan(): Promise<void> {
   }
 
   // Determine selected tools
-  const selectedTools: SupportedTool[] = [];
+  const selectedTools: ExtendedTool[] = [];
   const toolCheckboxes = document.querySelectorAll<HTMLInputElement>('.tools-grid input[type="checkbox"]');
   toolCheckboxes.forEach((cb) => {
-    if (cb.checked) selectedTools.push(cb.value as SupportedTool);
+    if (cb.checked) selectedTools.push(cb.value as ExtendedTool);
   });
 
   if (selectedTools.length === 0) {
     alert('Veuillez sélectionner au moins un outil d analyse.');
     return;
+  }
+
+  const darkwebToggles = document.querySelectorAll<HTMLButtonElement>('.darkweb-toggle-card.active');
+  darkwebToggles.forEach((btn) => {
+    const toolVal = btn.getAttribute('data-tool') as ExtendedTool | null;
+    if (toolVal && !selectedTools.includes(toolVal)) {
+      selectedTools.push(toolVal);
+    }
+  });
+
+  // Read optional Dark Web and API settings
+  const scanOptions: Record<string, any> = {};
+  try {
+    const torProxy = localStorage.getItem('osint_tor_proxy')?.trim();
+    const hibpKey = localStorage.getItem('osint_hibp_key')?.trim();
+    const hunterKey = localStorage.getItem('osint_hunter_key')?.trim();
+    const xposedKey = localStorage.getItem('osint_xposedornot_key')?.trim();
+    const hudsonKey = localStorage.getItem('osint_hudsonrock_key')?.trim();
+    if (torProxy) scanOptions.torProxy = torProxy;
+    if (hibpKey) scanOptions.hibpApiKey = hibpKey;
+    if (hunterKey) scanOptions.hunterApiKey = hunterKey;
+    if (xposedKey) scanOptions.xposedOrNotApiKey = xposedKey;
+    if (hudsonKey) scanOptions.hudsonRockApiKey = hudsonKey;
+  } catch {
+    // Ignore storage read errors
   }
 
   // Reset UI
@@ -369,7 +413,12 @@ async function startUnifiedScan(): Promise<void> {
 
   try {
     const result = await window.electronAPI.startScan({
-      targets: { email, username, phone },
+      targets: {
+        email,
+        username,
+        phone,
+        ...(Object.keys(scanOptions).length > 0 ? { options: scanOptions } : {}),
+      },
       selectedTools,
     });
 
@@ -444,7 +493,7 @@ function handleProgressUpdate(event: OrchestratorProgressEvent): void {
   }
 }
 
-function updateToolStatusCard(tool: SupportedTool, status: ToolStatus, label: string): void {
+function updateToolStatusCard(tool: ExtendedTool, status: ToolStatus, label: string): void {
   const card = document.getElementById(`status-card-${tool}`);
   if (!card) return;
 
@@ -974,10 +1023,18 @@ function showModalFeedback(msg: string): void {
    ========================================================================== */
 function initView3(): void {
   const subtabBtns = document.querySelectorAll<HTMLButtonElement>('.subtab-btn');
+  const darkwebBtn = document.getElementById('subtab-btn-darkweb') as HTMLButtonElement | null;
+  const darkwebPanel = document.getElementById('subtab-darkweb');
+
   subtabBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       subtabBtns.forEach((b) => b.classList.remove('active'));
+      if (darkwebBtn) darkwebBtn.classList.remove('active');
       document.querySelectorAll('.subtab-panel').forEach((p) => p.classList.remove('active'));
+      if (darkwebPanel) {
+        darkwebPanel.classList.remove('active');
+        darkwebPanel.style.display = 'none';
+      }
 
       btn.classList.add('active');
       const targetId = btn.getAttribute('data-subtab');
@@ -987,6 +1044,16 @@ function initView3(): void {
       }
     });
   });
+
+  if (darkwebBtn && darkwebPanel) {
+    darkwebBtn.addEventListener('click', () => {
+      subtabBtns.forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('.subtab-panel').forEach((p) => p.classList.remove('active'));
+      darkwebBtn.classList.add('active');
+      darkwebPanel.classList.add('active');
+      darkwebPanel.style.display = 'block';
+    });
+  }
 }
 
 function populateView3(result: OrchestratorResult): void {
@@ -1174,6 +1241,164 @@ function populateView3(result: OrchestratorResult): void {
       spiderfootContainer.innerHTML = '<p class="text-secondary">Aucune corrélation passive extraite par SpiderFoot.</p>';
     }
   }
+
+  // 7. Dark Web & Fuites (Ahmia, Hudson Rock, XposedOrNot, h8mail)
+  renderDarkWebSubtab(result.leaks || []);
+}
+
+function renderDarkWebSubtab(leaks: UnifiedLeak[]): void {
+  const darkwebContainer = document.getElementById('darkweb-results-container');
+  const summaryBadge = document.getElementById('darkweb-summary-badge');
+  if (!darkwebContainer) return;
+
+  const safeLeaks = Array.isArray(leaks) ? leaks : [];
+  if (summaryBadge) {
+    const count = safeLeaks.length;
+    const word = count <= 1 ? 'alerte détectée' : 'alertes détectées';
+    summaryBadge.textContent = `${count} ${word}`;
+  }
+
+  if (safeLeaks.length === 0) {
+    darkwebContainer.innerHTML = `
+      <div class="info-box" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3);">
+        <strong style="color: #34d399;">Aucune exposition Dark Web ni compromission détectée</strong>
+        <p class="text-secondary">Vos identifiants ne figurent dans aucune indexation .onion Ahmia, aucun journal d infostealer Hudson Rock ni aucune brèche XposedOrNot.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const infostealers = safeLeaks.filter(
+    (l) => l.category === 'infostealer' || l.sourceTool === 'hudsonrock'
+  );
+  const darkwebOnions = safeLeaks.filter(
+    (l) => l.category === 'darkweb' || l.category === 'darkweb_onion' || l.sourceTool === 'ahmia'
+  );
+  const breachesAndPastes = safeLeaks.filter(
+    (l) =>
+      l.category !== 'infostealer' &&
+      l.sourceTool !== 'hudsonrock' &&
+      l.category !== 'darkweb' &&
+      l.category !== 'darkweb_onion' &&
+      l.sourceTool !== 'ahmia'
+  );
+
+  const infostealersHtml =
+    infostealers.length === 0
+      ? `<p class="text-secondary" style="font-size: 0.85rem;">Aucune infection par logiciel voleur de session (Infostealer) répertoriée.</p>`
+      : infostealers
+          .map((item) => {
+            const meta = item.metadata || {};
+            const family = meta.stealerFamily || 'Infostealer inconnu';
+            const computer = meta.computerName || 'Poste non précisé';
+            const os = meta.operatingSystem || 'Système non précisé';
+            const dateStr = item.breachDate ? formatDateFr(item.breachDate) : 'Date non précisée';
+            return `
+              <div class="card darkweb-alert-card infostealer-card" style="background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.35); margin-bottom: 0.75rem;">
+                <div class="card-header-flex">
+                  <div>
+                    <span class="badge badge-risk-critical">Infostealer critique</span>
+                    <strong style="margin-left: 0.5rem; color: var(--text-primary);">${escapeHtml(item.breachName)}</strong>
+                  </div>
+                  <span class="badge badge-amber">${escapeHtml(family)}</span>
+                </div>
+                <p class="text-secondary" style="font-size: 0.85rem; margin-top: 0.5rem;">${escapeHtml(item.details)}</p>
+                <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem; font-size: 0.8rem;" class="text-secondary">
+                  <span>Poste : <code>${escapeHtml(computer)}</code></span>
+                  <span>Système : <code>${escapeHtml(os)}</code></span>
+                  <span>Date : <code>${escapeHtml(dateStr)}</code></span>
+                  <span>Cible : <code>${escapeHtml(item.target)}</code></span>
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+
+  const onionsHtml =
+    darkwebOnions.length === 0
+      ? `<p class="text-secondary" style="font-size: 0.85rem;">Aucune mention détectée sur les services cachés .onion du réseau Tor.</p>`
+      : darkwebOnions
+          .map((item) => {
+            const meta = item.metadata || {};
+            const onionUrl = meta.onionUrl || meta.onionDomain || '';
+            const routingLabel =
+              meta.routingMode === 'tor_socks5'
+                ? 'Proxy Tor SOCKS5'
+                : meta.routingMode === 'offline_fixture'
+                  ? 'Mode hors ligne'
+                  : 'Passerelle Clearnet';
+            return `
+              <div class="card darkweb-alert-card onion-card" style="background: rgba(139, 92, 246, 0.08); border-color: rgba(139, 92, 246, 0.35); margin-bottom: 0.75rem;">
+                <div class="card-header-flex">
+                  <div>
+                    <span class="badge badge-purple">Service caché .onion</span>
+                    <strong style="margin-left: 0.5rem; color: var(--text-primary);">${escapeHtml(item.breachName)}</strong>
+                  </div>
+                  <span class="badge badge-blue">${escapeHtml(routingLabel)}</span>
+                </div>
+                <p class="text-secondary" style="font-size: 0.85rem; margin-top: 0.5rem;">${escapeHtml(item.details)}</p>
+                ${
+                  onionUrl
+                    ? `<div style="margin-top: 0.5rem; font-size: 0.8rem;">Adresse .onion : <code>${escapeHtml(onionUrl)}</code></div>`
+                    : ''
+                }
+              </div>
+            `;
+          })
+          .join('');
+
+  const breachesHtml =
+    breachesAndPastes.length === 0
+      ? `<p class="text-secondary" style="font-size: 0.85rem;">Aucune brèche de base de données ni archive Paste complémentaire.</p>`
+      : `
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th>Catégorie</th>
+                <th>Nom de la brèche ou Paste</th>
+                <th>Cible</th>
+                <th>Données exposées</th>
+                <th>Détails</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${breachesAndPastes
+                .map((b) => {
+                  const catLabel = b.category === 'paste' ? 'Archive Paste' : 'Brèche de données';
+                  const catBadge = b.category === 'paste' ? 'badge-cyan' : 'badge-red';
+                  return `
+                    <tr>
+                      <td><span class="badge badge-blue">${escapeHtml(String(b.sourceTool))}</span></td>
+                      <td><span class="badge ${catBadge}">${catLabel}</span></td>
+                      <td><strong style="color: #f87171;">${escapeHtml(b.breachName)}</strong></td>
+                      <td><code>${escapeHtml(b.target)}</code></td>
+                      <td>${(b.dataClasses || []).map((c) => `<span class="badge badge-purple">${escapeHtml(c)}</span>`).join(' ')}</td>
+                      <td class="text-secondary" style="font-size: 0.8rem;">${escapeHtml(b.details)}</td>
+                    </tr>
+                  `;
+                })
+                .join('')}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+  darkwebContainer.innerHTML = `
+    <div id="darkweb-infostealers-section" style="margin-bottom: 1.5rem;">
+      <h3 class="subsection-title" style="margin-bottom: 0.75rem;">Journaux d infections Infostealers (Hudson Rock Cavalier)</h3>
+      ${infostealersHtml}
+    </div>
+    <div id="darkweb-onion-section" style="margin-bottom: 1.5rem;">
+      <h3 class="subsection-title" style="margin-bottom: 0.75rem;">Indexation Dark Web et réseau Tor (.onion via Ahmia)</h3>
+      ${onionsHtml}
+    </div>
+    <div id="darkweb-breaches-section">
+      <h3 class="subsection-title" style="margin-bottom: 0.75rem;">Bases de données compromises et Pastes (XposedOrNot et h8mail)</h3>
+      ${breachesHtml}
+    </div>
+  `;
 }
 
 /* ==========================================================================
@@ -1223,9 +1448,15 @@ function initView4(): void {
     btnSaveSettings.addEventListener('click', () => {
       const hibpKey = (document.getElementById('input-hibp-key') as HTMLInputElement | null)?.value || '';
       const hunterKey = (document.getElementById('input-hunter-key') as HTMLInputElement | null)?.value || '';
+      const torProxy = (document.getElementById('input-tor-proxy') as HTMLInputElement | null)?.value || '';
+      const xposedKey = (document.getElementById('input-xposedornot-key') as HTMLInputElement | null)?.value || '';
+      const hudsonKey = (document.getElementById('input-hudsonrock-key') as HTMLInputElement | null)?.value || '';
 
       localStorage.setItem('osint_hibp_key', hibpKey);
       localStorage.setItem('osint_hunter_key', hunterKey);
+      localStorage.setItem('osint_tor_proxy', torProxy);
+      localStorage.setItem('osint_xposedornot_key', xposedKey);
+      localStorage.setItem('osint_hudsonrock_key', hudsonKey);
 
       if (feedbackSettings) {
         feedbackSettings.style.display = 'inline';
@@ -1236,9 +1467,12 @@ function initView4(): void {
     });
   }
 
-  // Restore saved API keys
+  // Restore saved API keys and Tor proxy
   const savedHibp = localStorage.getItem('osint_hibp_key');
   const savedHunter = localStorage.getItem('osint_hunter_key');
+  const savedTorProxy = localStorage.getItem('osint_tor_proxy');
+  const savedXposed = localStorage.getItem('osint_xposedornot_key');
+  const savedHudson = localStorage.getItem('osint_hudsonrock_key');
   if (savedHibp) {
     const el = document.getElementById('input-hibp-key') as HTMLInputElement | null;
     if (el) el.value = savedHibp;
@@ -1246,6 +1480,18 @@ function initView4(): void {
   if (savedHunter) {
     const el = document.getElementById('input-hunter-key') as HTMLInputElement | null;
     if (el) el.value = savedHunter;
+  }
+  if (savedTorProxy) {
+    const el = document.getElementById('input-tor-proxy') as HTMLInputElement | null;
+    if (el) el.value = savedTorProxy;
+  }
+  if (savedXposed) {
+    const el = document.getElementById('input-xposedornot-key') as HTMLInputElement | null;
+    if (el) el.value = savedXposed;
+  }
+  if (savedHudson) {
+    const el = document.getElementById('input-hudsonrock-key') as HTMLInputElement | null;
+    if (el) el.value = savedHudson;
   }
 }
 
@@ -1358,10 +1604,12 @@ function renderComparisonResults(result: AuditComparisonResult): void {
   const statNew = document.getElementById('stat-newly-exposed');
   const statPersistent = document.getElementById('stat-persistently-exposed');
   const statResolved = document.getElementById('stat-resolved-accounts');
+  const statNewLeaks = document.getElementById('stat-newly-exposed-leaks');
 
   if (statNew) statNew.textContent = String(result.stats.newCount);
   if (statPersistent) statPersistent.textContent = String(result.stats.persistentCount);
   if (statResolved) statResolved.textContent = String(result.stats.resolvedCount);
+  if (statNewLeaks) statNewLeaks.textContent = String(result.leakStats?.newLeaksCount ?? 0);
 
   // 3. Differential accounts table
   const tbody = document.getElementById('comparison-tbody');
@@ -1485,7 +1733,8 @@ async function loadSavedScans(): Promise<void> {
           if (loaded.scan) {
             currentScanId = loaded.scan.id;
             currentAccounts = loaded.accounts;
-            currentScanLeaks = [];
+            currentScanLeaks = loaded.leaks || [];
+            renderDarkWebSubtab(currentScanLeaks);
             await refreshRiskScore();
             const nav2 = document.getElementById('nav-view2');
             if (nav2) nav2.click();
@@ -1566,8 +1815,8 @@ async function loadSavedScans(): Promise<void> {
   }
 }
 
-let cachedToolsHealth: Record<SupportedTool, any> | null = null;
-let inFlightHealthPromise: Promise<Record<SupportedTool, any>> | null = null;
+let cachedToolsHealth: Record<ExtendedTool, any> | null = null;
+let inFlightHealthPromise: Promise<Record<ExtendedTool, any>> | null = null;
 
 async function loadToolsHealth(force = false): Promise<void> {
   const tbody = document.getElementById('health-tbody');
@@ -1580,7 +1829,7 @@ async function loadToolsHealth(force = false): Promise<void> {
   }
 
   try {
-    let health: Record<SupportedTool, any>;
+    let health: Record<ExtendedTool, any>;
     if (cachedToolsHealth && !force) {
       health = cachedToolsHealth;
     } else {
@@ -1592,17 +1841,20 @@ async function loadToolsHealth(force = false): Promise<void> {
       health = await inFlightHealthPromise;
       cachedToolsHealth = health;
     }
-    const toolUsages: Record<SupportedTool, string> = {
+    const toolUsages: Record<ExtendedTool, string> = {
       holehe: 'Recherche email sur plus de 120 plateformes',
       maigret: 'Traçage de pseudonyme sur plus de 3 000 sites',
       ignorant: 'Vérification téléphone sur réseaux et messageries',
       h8mail: 'Détection de fuites et brèches de sécurité',
       ghunt: 'Extraction métadonnées de compte Google',
       spiderfoot: 'Reconnaissance et corrélations passives',
+      ahmia: 'Indexation Dark Web et services cachés .onion Tor',
+      xposedornot: 'Analyse de brèches de données et archives Paste',
+      hudsonrock: 'Détection d infections par logiciels Infostealers',
     };
 
     tbody.innerHTML = '';
-    (Object.keys(health) as SupportedTool[]).forEach((tool) => {
+    (Object.keys(health) as ExtendedTool[]).forEach((tool) => {
       const h = health[tool];
       const tr = document.createElement('tr');
       const isOk = h.installed;

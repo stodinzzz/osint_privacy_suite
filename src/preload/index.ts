@@ -5,6 +5,7 @@
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import type {
+  ExtendedTool,
   OrchestratorTargets,
   SupportedTool,
   OrchestratorResult,
@@ -27,7 +28,7 @@ import type { ExportReportResult } from '../main/ipc-handlers.js';
 export type { ExportReportResult };
 
 export interface ElectronAPI {
-  startScan: (params: { targets: OrchestratorTargets; selectedTools?: SupportedTool[] }) => Promise<OrchestratorResult>;
+  startScan: (params: { targets: OrchestratorTargets; selectedTools?: ExtendedTool[] }) => Promise<OrchestratorResult>;
   cancelScan: (scanId: string) => Promise<boolean>;
   getAccounts: (scanId?: string) => Promise<DiscoveredAccountRecord[]>;
   updateAccountStatus: (accountId: string, status: string, notes?: string) => Promise<boolean>;
@@ -35,11 +36,11 @@ export interface ElectronAPI {
   saveGdprRequest: (request: GdprRequestInput) => Promise<string>;
   listGdprRequests: (scanId?: string) => Promise<GdprRequestRecord[]>;
   listScans: () => Promise<ScanRecord[]>;
-  loadScan: (scanId: string) => Promise<{ scan: ScanRecord | null; accounts: DiscoveredAccountRecord[] }>;
+  loadScan: (scanId: string) => Promise<{ scan: ScanRecord | null; accounts: DiscoveredAccountRecord[]; leaks?: UnifiedLeak[] }>;
   deleteScan: (scanId: string) => Promise<boolean>;
   exportScanJson: (scanId: string) => Promise<string>;
   importScanJson: (jsonContent: string) => Promise<string>;
-  checkHealth: () => Promise<Record<SupportedTool, ToolHealth>>;
+  checkHealth: () => Promise<Record<ExtendedTool, ToolHealth>>;
   openExternal: (url: string) => Promise<void>;
   writeClipboard: (text: string) => Promise<void>;
   onToolProgress: (callback: (event: OrchestratorProgressEvent) => void) => () => void;

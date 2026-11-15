@@ -30,12 +30,45 @@ export interface ComparisonStats {
   resolvedCount: number;
 }
 
+export interface LeakComparisonStats {
+  totalLeaksA: number;
+  totalLeaksB: number;
+  newLeaksCount: number;
+  persistentLeaksCount: number;
+  resolvedLeaksCount: number;
+}
+
 export interface AuditComparisonResult {
   newlyExposed: UnifiedAccount[];
   persistentlyExposed: UnifiedAccount[];
   resolvedAccounts: UnifiedAccount[];
+  newlyExposedLeaks?: UnifiedLeak[];
+  persistentLeaks?: UnifiedLeak[];
+  resolvedLeaks?: UnifiedLeak[];
   scoreEvolution: ScoreEvolution;
   stats: ComparisonStats;
+  leakStats?: LeakComparisonStats;
+}
+
+/**
+ * Derives the canonical unique key for a leak/breach/Dark Web finding across audits
+ */
+export function getCanonicalLeakKey(leak: Partial<UnifiedLeak> | Record<string, any>): string {
+  if (!leak || typeof leak !== 'object') return 'unknown:::unknown:::unknown';
+  const l = leak as any;
+  const source = (l.sourceTool || l.source_tool || 'unknown')
+    .toString()
+    .toLowerCase()
+    .trim();
+  const breach = (l.breachName || l.breach_name || 'unknown_breach')
+    .toString()
+    .toLowerCase()
+    .trim();
+  const target = (l.target || '')
+    .toString()
+    .toLowerCase()
+    .trim();
+  return `${source}:::${breach}:::${target}`;
 }
 
 /**
@@ -204,7 +237,55 @@ export function compareAudits(auditA: AuditSnapshot, auditB: AuditSnapshot): Aud
   const scoreB = resolveSnapshotScore(auditB);
   const scoreEvolution = formatScoreEvolutionFrench(scoreA, scoreB);
 
-  // 4. Compute statistics
+  // 4. Compute leak / Dark Web differential tracking
+  const leaksA = Array.isArray(auditA?.leaks) ? auditA.leaks : [];
+  const leaksB = Array.isArray(auditB?.leaks) ? auditB.leaks : [];
+
+  const leakMapA = new Map<string, UnifiedLeak>();
+  for (const leak of leaksA) {
+    if (!leak || typeof leak !== 'object') continue;
+    const key = getCanonicalLeakKey(leak);
+    if (!leakMapA.has(key)) {
+      leakMapA.set(key, leak);
+    }
+  }
+
+  const leakMapB = new Map<string, UnifiedLeak>();
+  for (const leak of leaksB) {
+    if (!leak || typeof leak !== 'object') continue;
+    const key = getCanonicalLeakKey(leak);
+    if (!leakMapB.has(key)) {
+      leakMapB.set(key, leak);
+    }
+  }
+
+  const newlyExposedLeaks: UnifiedLeak[] = [];
+  const persistentLeaks: UnifiedLeak[] = [];
+  const resolvedLeaks: UnifiedLeak[] = [];
+
+  for (const [key, leakB] of leakMapB.entries()) {
+    if (!leakMapA.has(key)) {
+      newlyExposedLeaks.push(leakB);
+    } else {
+      persistentLeaks.push(leakB);
+    }
+  }
+
+  for (const [key, leakA] of leakMapA.entries()) {
+    if (!leakMapB.has(key)) {
+      resolvedLeaks.push(leakA);
+    }
+  }
+
+  const leakStats: LeakComparisonStats = {
+    totalLeaksA: leakMapA.size,
+    totalLeaksB: leakMapB.size,
+    newLeaksCount: newlyExposedLeaks.length,
+    persistentLeaksCount: persistentLeaks.length,
+    resolvedLeaksCount: resolvedLeaks.length,
+  };
+
+  // 5. Compute statistics
   const stats: ComparisonStats = {
     totalA: mapA.size,
     totalB: mapB.size,
@@ -217,7 +298,11 @@ export function compareAudits(auditA: AuditSnapshot, auditB: AuditSnapshot): Aud
     newlyExposed,
     persistentlyExposed,
     resolvedAccounts,
+    newlyExposedLeaks,
+    persistentLeaks,
+    resolvedLeaks,
     scoreEvolution,
     stats,
+    leakStats,
   };
 }

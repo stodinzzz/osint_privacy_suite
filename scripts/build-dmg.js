@@ -27,6 +27,8 @@ function log(step, msg) {
   console.log(`[BUILD-DMG] [${step}] ${msg}`);
 }
 
+process.noAsar = true;
+
 function main() {
   log('INIT', `Préparation du packaging macOS arm64 pour ${APP_NAME} v${APP_VERSION}`);
 
@@ -49,7 +51,7 @@ function main() {
   const resourcesDir = path.join(APP_BUNDLE_PATH, 'Contents', 'Resources');
   const defaultAsar = path.join(resourcesDir, 'default_app.asar');
   if (fs.existsSync(defaultAsar)) {
-    fs.rmSync(defaultAsar, { force: true });
+    fs.rmSync(defaultAsar, { recursive: true, force: true });
   }
 
   const appPayloadDir = path.join(resourcesDir, 'app');
@@ -69,12 +71,43 @@ function main() {
   };
   fs.writeFileSync(path.join(appPayloadDir, 'package.json'), JSON.stringify(prodPkgJson, null, 2));
 
-  execFileSync('/usr/bin/ditto', [path.join(ROOT_DIR, 'dist'), path.join(appPayloadDir, 'dist')]);
+  fs.mkdirSync(path.join(appPayloadDir, 'dist'), { recursive: true });
+  execFileSync('/usr/bin/ditto', [path.join(ROOT_DIR, 'dist', 'src'), path.join(appPayloadDir, 'dist', 'src')]);
   execFileSync('/usr/bin/ditto', [path.join(ROOT_DIR, 'data'), path.join(appPayloadDir, 'data')]);
+
+  // Copy embedded Python runtime if staged
+  const pythonSource = path.join(ROOT_DIR, 'resources', 'python');
+  if (fs.existsSync(pythonSource)) {
+    log('PYTHON', 'Copie du runtime Python portable arm64 dans Contents/Resources/python');
+    const destPython = path.join(resourcesDir, 'python');
+    execFileSync('/usr/bin/ditto', [pythonSource, destPython]);
+    const binDir = path.join(destPython, 'bin');
+    if (fs.existsSync(binDir)) {
+      for (const f of fs.readdirSync(binDir)) {
+        try {
+          fs.chmodSync(path.join(binDir, f), 0o755);
+        } catch {}
+      }
+    }
+  }
+
+  // Copy SpiderFoot engine if staged
+  const sfSource = path.join(ROOT_DIR, 'resources', 'spiderfoot');
+  if (fs.existsSync(sfSource)) {
+    log('SPIDERFOOT', 'Copie du moteur SpiderFoot dans Contents/Resources/spiderfoot');
+    const destSf = path.join(resourcesDir, 'spiderfoot');
+    execFileSync('/usr/bin/ditto', [sfSource, destSf]);
+    const sfPy = path.join(destSf, 'sf.py');
+    if (fs.existsSync(sfPy)) {
+      try {
+        fs.chmodSync(sfPy, 0o755);
+      } catch {}
+    }
+  }
 
   // 4. Customize Info.plist metadata
   const plistPath = path.join(APP_BUNDLE_PATH, 'Contents', 'Info.plist');
-  log('PLIST', 'Mise à jour des métadonnées Info.plist macOS');
+  log('PLIST', 'Mise a jour des metadonnees Info.plist macOS');
   const plistUpdates = [
     ['Set :CFBundleDisplayName', APP_NAME],
     ['Set :CFBundleName', APP_NAME],
@@ -91,8 +124,8 @@ function main() {
     }
   }
 
-  // 5. Clear extended attributes and perform ad-hoc code signing for Apple Silicon
-  log('CODESIGN', 'Signature ad-hoc Apple Silicon arm64 du paquet applicatif');
+  // 5. Clear extended attributes and perform ad hoc code signing for Apple Silicon
+  log('CODESIGN', 'Signature ad hoc Apple Silicon arm64 du paquet applicatif');
   try {
     execFileSync('/usr/bin/xattr', ['-cr', APP_BUNDLE_PATH]);
   } catch {}
@@ -101,9 +134,12 @@ function main() {
   // 6. Verify packaged .app binary runs headless check
   const macosExecPath = path.join(APP_BUNDLE_PATH, 'Contents', 'MacOS', 'Electron');
   log('VERIFY', 'Exécution du test headless sur le binaire packagé .app');
+  const childEnv = { ...process.env };
+  delete childEnv.ELECTRON_RUN_AS_NODE;
   const verifyOutput = execFileSync(macosExecPath, ['--test-headless'], {
     encoding: 'utf-8',
     timeout: 20000,
+    env: childEnv,
   });
   if (!verifyOutput.includes('[HEADLESS_TEST_SUCCESS]')) {
     throw new Error(`Le binaire packagé n'a pas validé le test headless :\n${verifyOutput}`);

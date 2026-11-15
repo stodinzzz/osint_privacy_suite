@@ -7,6 +7,7 @@ import os from 'node:os';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { BaseAdapter, BaseAdapterOptions } from './base-adapter.js';
+import { BinaryResolver } from '../binary-resolver.js';
 import {
   SupportedTool,
   ToolExecutionContext,
@@ -26,15 +27,17 @@ export class SpiderfootAdapter extends BaseAdapter {
   private spiderfootDir: string;
 
   constructor(options: SpiderfootAdapterOptions = {}) {
-    const dir = options.spiderfootDir ?? `${os.homedir()}/osint-perso/spiderfoot`;
-    const py = options.pythonBinary ?? path.join(dir, 'venv', 'bin', 'python');
+    const sf = BinaryResolver.resolveSpiderfoot(
+      options.spiderfootDir,
+      options.pythonBinary ?? options.binaryPath
+    );
 
     super({
-      binaryPath: py,
+      binaryPath: sf.pythonBinary,
       customRunner: options.customRunner,
       defaultTimeoutMs: options.defaultTimeoutMs ?? 60_000,
     });
-    this.spiderfootDir = dir;
+    this.spiderfootDir = sf.spiderfootDir;
   }
 
   async checkHealth(): Promise<ToolHealth> {

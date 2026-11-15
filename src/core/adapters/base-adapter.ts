@@ -15,6 +15,7 @@ import {
   UnifiedAccount,
   UnifiedLeak,
 } from '../types.js';
+import { BinaryResolver } from '../binary-resolver.js';
 
 export interface CommandExecutionOptions {
   cwd?: string;
@@ -130,11 +131,11 @@ export abstract class BaseAdapter implements IToolAdapter {
 
     const startTime = Date.now();
     const timeoutMs = options.timeoutMs ?? this.defaultTimeoutMs;
-    const env: NodeJS.ProcessEnv = {
-      ...process.env,
-      PATH: `/opt/homebrew/bin:/usr/local/bin:${os.homedir()}/.local/bin:${process.env.PATH || ''}`,
-      ...options.env,
-    };
+    const env = BinaryResolver.getExecutionEnvironment(
+      this.binaryPath || command,
+      options.env,
+      options.cwd
+    );
 
     return new Promise<CommandExecutionResult>((resolve) => {
       let stdout = '';

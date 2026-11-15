@@ -197,6 +197,42 @@
                 </div>
               </label>
             </div>
+
+            <div class="section-header-flex" style="margin-top: 1.25rem;">
+              <h3 class="subsection-title">Passerelles Dark Web, Infostealers et Brèches (simultanées)</h3>
+            </div>
+
+            <div class="darkweb-tools-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0.75rem; margin-top: 0.5rem;">
+              <button type="button" class="tool-checkbox-card darkweb-toggle-card active" id="tool-ahmia" data-tool="ahmia" aria-pressed="true" style="text-align: left; cursor: pointer;">
+                <div class="tool-card-content">
+                  <div class="tool-card-header">
+                    <span class="tool-name">Ahmia (Tor &amp; Dark Web)</span>
+                    <span class="badge badge-purple">Dark Web</span>
+                  </div>
+                  <p class="tool-desc">Recherche d'indexation sur les services cachés .onion du réseau Tor.</p>
+                </div>
+              </button>
+
+              <button type="button" class="tool-checkbox-card darkweb-toggle-card active" id="tool-xposedornot" data-tool="xposedornot" aria-pressed="true" style="text-align: left; cursor: pointer;">
+                <div class="tool-card-content">
+                  <div class="tool-card-header">
+                    <span class="tool-name">XposedOrNot</span>
+                    <span class="badge badge-red">Brèches &amp; Pastes</span>
+                  </div>
+                  <p class="tool-desc">Analyse des bases de données compromises et des archives publiques Paste.</p>
+                </div>
+              </button>
+
+              <button type="button" class="tool-checkbox-card darkweb-toggle-card active" id="tool-hudsonrock" data-tool="hudsonrock" aria-pressed="true" style="text-align: left; cursor: pointer;">
+                <div class="tool-card-content">
+                  <div class="tool-card-header">
+                    <span class="tool-name">Hudson Rock Cavalier</span>
+                    <span class="badge badge-amber">Infostealers</span>
+                  </div>
+                  <p class="tool-desc">Détection d'infections par logiciels voleurs de sessions et jetons.</p>
+                </div>
+              </button>
+            </div>
           </div>
 
           <!-- Commandes de lancement -->
@@ -247,6 +283,18 @@
             </div>
             <div id="status-card-spiderfoot" class="tool-status-card">
               <span class="tool-name">SpiderFoot</span>
+              <span class="status-pill status-queued">En attente</span>
+            </div>
+            <div id="status-card-ahmia" class="tool-status-card">
+              <span class="tool-name">Ahmia Dark Web</span>
+              <span class="status-pill status-queued">En attente</span>
+            </div>
+            <div id="status-card-xposedornot" class="tool-status-card">
+              <span class="tool-name">XposedOrNot</span>
+              <span class="status-pill status-queued">En attente</span>
+            </div>
+            <div id="status-card-hudsonrock" class="tool-status-card">
+              <span class="tool-name">Hudson Rock</span>
               <span class="status-pill status-queued">En attente</span>
             </div>
           </div>
@@ -467,6 +515,7 @@
           <button type="button" class="subtab-btn" data-subtab="subtab-ghunt">GHunt</button>
           <button type="button" class="subtab-btn" data-subtab="subtab-h8mail">h8mail</button>
           <button type="button" class="subtab-btn" data-subtab="subtab-spiderfoot">SpiderFoot</button>
+          <button type="button" class="subtab-btn-darkweb" id="subtab-btn-darkweb" data-subtab="subtab-darkweb" style="padding: 0.5rem 1rem; border-radius: 0.5rem; border: 1px solid rgba(139, 92, 246, 0.4); background: rgba(139, 92, 246, 0.12); color: var(--text-primary); cursor: pointer; font-weight: 600;">Dark Web &amp; Fuites</button>
         </div>
 
         <!-- Contenu des onglets -->
@@ -532,6 +581,22 @@
               <h2 class="card-title">Corrélations passives SpiderFoot</h2>
               <div id="spiderfoot-results-container" class="results-container">
                 <p class="text-secondary">Aucune corrélation passive pour le moment.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Onglet Dark Web & Fuites -->
+          <div id="subtab-darkweb" class="darkweb-subtab-panel" style="display: none;">
+            <div class="card">
+              <div class="card-header-flex">
+                <div>
+                  <h2 class="card-title">Exploration Dark Web, Infostealers et Fuites de données</h2>
+                  <p class="view-description" style="margin-top: 0.25rem;">Résultats consolidés issus du réseau Tor (.onion via Ahmia), des journaux d'infostealers (Hudson Rock Cavalier) et des bases compromises (XposedOrNot et h8mail).</p>
+                </div>
+                <span id="darkweb-summary-badge" class="badge badge-purple">0 alerte détectée</span>
+              </div>
+              <div id="darkweb-results-container" class="results-container" style="margin-top: 1rem;">
+                <p class="text-secondary">Aucune analyse Dark Web ou recherche de fuites disponible pour la session en cours.</p>
               </div>
             </div>
           </div>
@@ -640,6 +705,11 @@
                 <span id="stat-resolved-accounts" class="stat-value text-emerald">0</span>
                 <span class="stat-subtext">Suppression effectuée avec succès</span>
               </div>
+              <div class="stat-card card-newly-exposed-leaks">
+                <span class="stat-label">Nouvelles fuites ou alertes Dark Web</span>
+                <span id="stat-newly-exposed-leaks" class="stat-value text-red">0</span>
+                <span class="stat-subtext">Brèches ou mentions .onion apparues</span>
+              </div>
             </div>
 
             <!-- Tableau détaillé différentiel -->
@@ -705,6 +775,21 @@
             <div class="form-group">
               <label for="input-hunter-key" class="form-label">Clé API Hunter.io (optionnelle)</label>
               <input type="password" id="input-hunter-key" class="form-input" placeholder="Clé pour enrichir les domaines">
+            </div>
+
+            <div class="form-group">
+              <label for="input-tor-proxy" class="form-label">Proxy SOCKS5 Tor local (optionnel)</label>
+              <input type="text" id="input-tor-proxy" class="form-input" placeholder="127.0.0.1:9050">
+            </div>
+
+            <div class="form-group">
+              <label for="input-xposedornot-key" class="form-label">Clé API XposedOrNot (optionnelle)</label>
+              <input type="password" id="input-xposedornot-key" class="form-input" placeholder="Optionnelle pour quota étendu">
+            </div>
+
+            <div class="form-group">
+              <label for="input-hudsonrock-key" class="form-label">Clé API Hudson Rock Cavalier (optionnelle)</label>
+              <input type="password" id="input-hudsonrock-key" class="form-input" placeholder="Optionnelle pour Cavalier avancé">
             </div>
           </div>
 

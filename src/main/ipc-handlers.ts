@@ -21,6 +21,7 @@ import {
   GdprEmailResult,
 } from '../core/gdpr-generator.js';
 import {
+  ExtendedTool,
   OrchestratorTargets,
   SupportedTool,
   OrchestratorResult,
@@ -211,7 +212,7 @@ export function createIpcHandlers(deps: IpcHandlerDependencies) {
   return {
     async handleScanStart(
       event: { sender: { send: (channel: string, data: any) => void } },
-      params: { targets: OrchestratorTargets; selectedTools?: SupportedTool[] }
+      params: { targets: OrchestratorTargets; selectedTools?: ExtendedTool[] }
     ): Promise<OrchestratorResult> {
       const { targets, selectedTools } = params;
       const targetEmail = targets?.email ?? null;
@@ -240,7 +241,7 @@ export function createIpcHandlers(deps: IpcHandlerDependencies) {
         target_username: targetUsername,
         target_phone: targetPhone,
         status: 'completed',
-        tools_selected: (selectedTools && selectedTools.length > 0) ? selectedTools : (Object.keys(result.toolResults) as SupportedTool[]),
+        tools_selected: (selectedTools && selectedTools.length > 0) ? selectedTools : (Object.keys(result.toolResults) as ExtendedTool[]),
         summary_counts: result.summary,
       });
 
@@ -259,6 +260,11 @@ export function createIpcHandlers(deps: IpcHandlerDependencies) {
             status: acc.cleaned ? 'deleted' : 'detected',
           }))
         );
+      }
+
+      // Persist discovered leaks and Dark Web findings in SQLite
+      if (result.leaks && result.leaks.length > 0 && typeof storage.saveLeaks === 'function') {
+        storage.saveLeaks(result.scanId, result.leaks);
       }
 
       return result;
@@ -303,10 +309,11 @@ export function createIpcHandlers(deps: IpcHandlerDependencies) {
       return storage.listScans();
     },
 
-    handleScanLoad(_event: any, scanId: string): { scan: ScanRecord | null; accounts: DiscoveredAccountRecord[] } {
+    handleScanLoad(_event: any, scanId: string): { scan: ScanRecord | null; accounts: DiscoveredAccountRecord[]; leaks?: UnifiedLeak[] } {
       const scan = storage.getScan(scanId);
       const accounts = storage.getAccountsByScan(scanId);
-      return { scan, accounts };
+      const leaks = typeof storage.getLeaksByScan === 'function' ? storage.getLeaksByScan(scanId) : [];
+      return leaks.length > 0 ? { scan, accounts, leaks } : { scan, accounts };
     },
 
     handleScanDelete(_event: any, scanId: string): boolean {
@@ -321,7 +328,7 @@ export function createIpcHandlers(deps: IpcHandlerDependencies) {
       return storage.importScanFromJson(jsonContent);
     },
 
-    async handleToolsCheckHealth(_event: any): Promise<Record<SupportedTool, ToolHealth>> {
+    async handleToolsCheckHealth(_event: any): Promise<Record<ExtendedTool, ToolHealth>> {
       return await orchestrator.checkAllHealth();
     },
 

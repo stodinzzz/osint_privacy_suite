@@ -67,6 +67,9 @@ export class Normalizer {
         ? Array.from(new Set(safeRaw.dataClasses))
         : ['credentials'],
       details: safeRaw.details || `Breach record for ${breachName}`,
+      ...(safeRaw.category ? { category: safeRaw.category } : {}),
+      ...(safeRaw.severity ? { severity: safeRaw.severity } : {}),
+      ...(safeRaw.metadata ? { metadata: safeRaw.metadata } : {}),
     };
   }
 
@@ -131,6 +134,13 @@ export class Normalizer {
           ...existing,
           dataClasses: mergedDataClasses,
           details: mergedDetails,
+          category: existing.category || normalized.category,
+          severity: existing.severity === 'critical' || normalized.severity === 'critical'
+            ? 'critical'
+            : existing.severity || normalized.severity,
+          metadata: existing.metadata || normalized.metadata
+            ? { ...(normalized.metadata || {}), ...(existing.metadata || {}) }
+            : undefined,
         });
       }
     }

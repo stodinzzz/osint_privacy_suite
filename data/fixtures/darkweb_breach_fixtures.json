@@ -1,0 +1,58 @@
+{
+  "ahmia": {
+    "default": [
+      {
+        "title": "Hidden Paste Archive & Credential Index",
+        "onionUrl": "http://pasteidx7k3m9v2q4x8z5w1r6t0y3u7i9o2p4a6s8d0f2g4h6j8k0l2m.onion/view/98412",
+        "snippet": "Indexation publique d identifiants et correspondances d adresses electroniques sur relais Tor",
+        "lastSeen": "2026/11/01"
+      },
+      {
+        "title": "Onion OSINT Directory Forum",
+        "onionUrl": "http://forumdir4b7n2m9v5c8x1z3l6k9j2h5g8f1d4s7a0p3o6i9u2y5t8r1e.onion/thread/4410",
+        "snippet": "Archive de discussions et listes de comptes collectes sur services externes",
+        "lastSeen": "2026/10/24"
+      }
+    ]
+  },
+  "xposedornot": {
+    "breaches": [
+      {
+        "breach": "Canva",
+        "domain": "canva.com",
+        "breachedDate": "2019-05-24",
+        "exposedData": ["Email addresses", "Names", "Passwords", "Usernames"],
+        "details": "Fuite de base de donnees incluant les adresses electroniques, pseudonymes et condensats de mots de passe."
+      },
+      {
+        "breach": "Apollo",
+        "domain": "apollo.io",
+        "breachedDate": "2018-07-23",
+        "exposedData": ["Email addresses", "Phone numbers", "Employers", "Locations"],
+        "details": "Exposition de donnees professionnelles incluant coordonnees telephoniques et adresses electroniques."
+      }
+    ],
+    "pastes": [
+      {
+        "pasteId": "pastebin_884210",
+        "source": "Pastebin Archive",
+        "date": "2025-08-14",
+        "exposedData": ["Email addresses", "Combo list credentials"],
+        "details": "Presence detectee dans une liste publique de comptes partages sur plateforme de texte."
+      }
+    ]
+  },
+  "hudsonrock": {
+    "stealers": [
+      {
+        "stealerFamily": "LummaC2",
+        "dateCompromised": "2025-11-18T14:22:00Z",
+        "computerName": "WORKSTATION_OSX",
+        "operatingSystem": "macOS 15.1",
+        "totalCorporateServices": 1,
+        "totalUserServices": 6,
+        "compromisedServices": ["github.com", "discord.com", "amazon.fr", "spotify.com"]
+      }
+    ]
+  }
+}

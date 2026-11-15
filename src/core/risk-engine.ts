@@ -107,6 +107,8 @@ export function classifyLeak(leak: UnifiedLeak): { points: number; isCritical: b
   }
 
   const combinedText = [
+    leak.sourceTool || '',
+    leak.category || '',
     leak.breachName || '',
     leak.details || '',
     ...(Array.isArray(leak.dataClasses) ? leak.dataClasses : []),
@@ -114,6 +116,45 @@ export function classifyLeak(leak: UnifiedLeak): { points: number; isCritical: b
     .join(' ')
     .toLowerCase()
     .replace(/[_.\-\/]/g, ' ');
+
+  const infostealerPatterns = [
+    /\binfostealers?\b/i,
+    /\bstealers?\b/i,
+    /\blummac2\b/i,
+    /\blumma\b/i,
+    /\bredline\b/i,
+    /\bstealc\b/i,
+    /\bvidar\b/i,
+    /\braccoon\b/i,
+    /\bhudsonrock\b/i,
+    /\bcavalier\b/i,
+  ];
+
+  if (
+    leak.category === 'infostealer' ||
+    leak.sourceTool === 'hudsonrock' ||
+    infostealerPatterns.some((pattern) => pattern.test(combinedText))
+  ) {
+    return { points: 32, isCritical: true };
+  }
+
+  const darkWebPatterns = [
+    /\bdark[ ]?web\b/i,
+    /\bahmia\b/i,
+    /\bonion\b/i,
+  ];
+
+  if (
+    leak.category === 'darkweb' ||
+    leak.sourceTool === 'ahmia' ||
+    darkWebPatterns.some((pattern) => pattern.test(combinedText))
+  ) {
+    return { points: 20, isCritical: true };
+  }
+
+  if (leak.category === 'paste') {
+    return { points: 20, isCritical: true };
+  }
 
   const criticalPatterns = [
     /\bpasswords?\b/i,
@@ -199,7 +240,28 @@ export function generateRemediationRecommendations(
 
   const uncleanedAccounts = safeAccounts.filter((acc) => !isAccountCleaned(acc));
 
-  // 1. Priorite 1 Critique : Mots de passe ou identifiants compromis
+  // 1a. Priorite 1 Critique : Infections par logiciels espions Infostealers
+  const infostealerLeaks = safeLeaks.filter(
+    (l) =>
+      l.category === 'infostealer' ||
+      l.sourceTool === 'hudsonrock' ||
+      /\b(infostealer|lummac2|lumma|redline|stealc|vidar|raccoon)\b/i.test(
+        `${l.breachName || ''} ${l.details || ''}`
+      )
+  );
+  if (infostealerLeaks.length > 0) {
+    recommendations.push({
+      priority: 1,
+      title: 'Assainissement immediat d une infection par logiciel espion',
+      description: stripHyphens(
+        'Des identifiants personnels et jetons de session ont ete derobes par un programme malveillant de type infostealer. Lancez sans tarder une analyse antivirale complete de vos equipements et reinitialisez l ensemble de vos sessions et mots de passe enregistres.'
+      ),
+      actionType: 'password',
+      targetService: 'Alerte Infostealer',
+    });
+  }
+
+  // 1b. Priorite 1 Critique : Mots de passe ou identifiants compromis
   const criticalLeaks = safeLeaks.filter((l) => classifyLeak(l).isCritical);
   if (criticalLeaks.length > 0) {
     const rawLeakNames = criticalLeaks
@@ -217,6 +279,25 @@ export function generateRemediationRecommendations(
       ),
       actionType: 'password',
       targetService: leakNames || 'Fuites de securite',
+    });
+  }
+
+  // 1c. Priorite 2 Eleve : Presences detectees sur le Dark Web (.onion)
+  const darkWebLeaks = safeLeaks.filter(
+    (l) =>
+      l.category === 'darkweb' ||
+      l.sourceTool === 'ahmia' ||
+      /\b(dark web|\.onion|ahmia)\b/i.test(`${l.breachName || ''} ${l.details || ''}`)
+  );
+  if (darkWebLeaks.length > 0) {
+    recommendations.push({
+      priority: 2,
+      title: 'Surveillance renforcee contre l exposition sur le Dark Web',
+      description: stripHyphens(
+        'Vos identifiants figurent sur des pages indexees du reseau Tor Dark Web. Activez sans delai la double authentification sur toutes vos applications sensibles et surveillez vos activites.'
+      ),
+      actionType: 'password',
+      targetService: 'Passerelle Dark Web',
     });
   }
 

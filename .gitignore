@@ -4,6 +4,8 @@ node_modules/
 # Build & Release Artifacts
 dist/
 release/
+resources/python/
+resources/spiderfoot/
 *.dmg
 *.app/
 

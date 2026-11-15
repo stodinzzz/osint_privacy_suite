@@ -2,11 +2,39 @@
  * Core Types and Interfaces for OSINT & Privacy Suite
  */
 
-export type SupportedTool = 'holehe' | 'maigret' | 'ignorant' | 'h8mail' | 'ghunt' | 'spiderfoot';
+export type SupportedTool =
+  | 'holehe'
+  | 'maigret'
+  | 'ignorant'
+  | 'h8mail'
+  | 'ghunt'
+  | 'spiderfoot';
+
+export type DarkWebTool = 'ahmia' | 'xposedornot' | 'hudsonrock';
+
+export type ExtendedTool = SupportedTool | DarkWebTool;
 
 export type AccountStatus = 'claimed' | 'unclaimed' | 'rate_limited';
 
 export type JdmDifficulty = 'easy' | 'medium' | 'hard' | 'impossible' | 'limited' | 'conditional' | 'unknown';
+
+export type LeakCategory = 'breach' | 'paste' | 'infostealer' | 'darkweb' | 'darkweb_onion';
+
+export interface DarkWebMetadata {
+  onionUrl?: string;
+  onionDomain?: string;
+  pageTitle?: string;
+  snippet?: string;
+  lastSeen?: string;
+  stealerFamily?: string;
+  computerName?: string;
+  operatingSystem?: string;
+  infectionDate?: string;
+  compromisedCount?: number;
+  compromisedServices?: string[];
+  pasteSource?: string;
+  routingMode?: 'tor_socks5' | 'clearnet' | 'offline_fixture';
+}
 
 export interface JdmInfo {
   matched: boolean;
@@ -28,7 +56,7 @@ export interface UnifiedAccount {
   serviceName: string; // Display name (e.g. "GitHub", "Snapchat", "Amazon")
   domain: string; // Main domain (e.g. "github.com")
   accountIdentifier: string; // Target email, username, or phone used for detection
-  sourceTool: SupportedTool;
+  sourceTool: ExtendedTool;
   status: AccountStatus;
   profileUrl?: string; // Direct profile URL if available
   avatarUrl?: string; // Avatar URL if extracted
@@ -41,11 +69,14 @@ export interface UnifiedAccount {
 export interface UnifiedLeak {
   id: string;
   target: string;
-  sourceTool: 'h8mail' | 'spiderfoot';
+  sourceTool: ExtendedTool | string;
   breachName: string;
   breachDate?: string;
   dataClasses: string[];
   details: string;
+  category?: LeakCategory;
+  severity?: 'critical' | 'high' | 'medium' | 'low';
+  metadata?: DarkWebMetadata;
 }
 
 export interface ToolExecutionContext {
@@ -58,7 +89,7 @@ export interface ToolExecutionContext {
 }
 
 export interface ToolResult {
-  toolName: SupportedTool;
+  toolName: ExtendedTool;
   success: boolean;
   durationMs: number;
   rawOutput: any;
@@ -81,7 +112,7 @@ export interface ToolHealth {
 }
 
 export interface IToolAdapter {
-  readonly name: SupportedTool;
+  readonly name: ExtendedTool;
   checkHealth(): Promise<ToolHealth>;
   execute(context: ToolExecutionContext): Promise<ToolResult>;
   abort?(signal?: NodeJS.Signals): void;
@@ -92,7 +123,7 @@ export type ToolStatus = 'queued' | 'running' | 'completed' | 'failed' | 'skippe
 
 export interface OrchestratorProgressEvent {
   scanId: string;
-  tool: SupportedTool;
+  tool: ExtendedTool;
   status: ToolStatus;
   progress?: number;
   message?: string;
@@ -112,7 +143,7 @@ export interface OrchestratorResult {
   completedAt: string;
   durationMs: number;
   targets: OrchestratorTargets;
-  toolResults: Partial<Record<SupportedTool, ToolResult>>;
+  toolResults: Partial<Record<ExtendedTool, ToolResult>>;
   accounts: UnifiedAccount[];
   leaks: UnifiedLeak[];
   summary: {
