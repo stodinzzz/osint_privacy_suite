@@ -1936,8 +1936,9 @@ body.light-theme {
   --md-sys-elevation-3: 0 4px 10px 3px rgba(25, 28, 32, 0.12), 0 1px 3px rgba(25, 28, 32, 0.18);
 
   /* Legacy Compatibility Variables */
-  --bg-primary: #f9f9ff;
-  --text-primary: #191c20;
+  --bg-primary: #f8fafc;
+  --bg-secondary: #ffffff;
+  --text-primary: #0f172a;
   --text-secondary: var(--md-sys-color-on-surface-variant);
   --text-muted: var(--md-sys-color-outline);
   --border-color: var(--md-sys-color-outline-variant);
