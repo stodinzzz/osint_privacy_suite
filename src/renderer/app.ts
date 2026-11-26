@@ -1197,7 +1197,7 @@ function populateView3(result: OrchestratorResult): void {
                 .map(
                   (l) => `
                 <tr>
-                  <td><strong style="color: #f87171;">${escapeHtml(l.breachName)}</strong></td>
+                  <td><strong class="breach-title">${escapeHtml(l.breachName)}</strong></td>
                   <td><code>${escapeHtml(l.target)}</code></td>
                   <td>${(l.dataClasses || []).map((c) => `<span class="badge badge-purple">${escapeHtml(c)}</span>`).join(' ')}</td>
                   <td class="text-secondary" style="font-size: 0.8rem;">${escapeHtml(l.details)}</td>
@@ -1211,8 +1211,8 @@ function populateView3(result: OrchestratorResult): void {
       `;
     } else {
       h8mailContainer.innerHTML = `
-        <div class="info-box" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3);">
-          <strong style="color: #34d399;">Aucune brèche de données répertoriée</strong>
+        <div class="info-box m3-banner-safe">
+          <strong>Aucune brèche de données répertoriée</strong>
           <p class="text-secondary">Vos identifiants ne figurent dans aucune fuite connue analysée par h8mail.</p>
         </div>
       `;
@@ -1260,8 +1260,8 @@ function renderDarkWebSubtab(leaks: UnifiedLeak[]): void {
 
   if (safeLeaks.length === 0) {
     darkwebContainer.innerHTML = `
-      <div class="info-box" style="background: rgba(16, 185, 129, 0.1); border-color: rgba(16, 185, 129, 0.3);">
-        <strong style="color: #34d399;">Aucune exposition Dark Web ni compromission détectée</strong>
+      <div class="info-box m3-banner-safe">
+        <strong>Aucune exposition Dark Web ni compromission détectée</strong>
         <p class="text-secondary">Vos identifiants ne figurent dans aucune indexation .onion Ahmia, aucun journal d infostealer Hudson Rock ni aucune brèche XposedOrNot.</p>
       </div>
     `;
@@ -1294,11 +1294,11 @@ function renderDarkWebSubtab(leaks: UnifiedLeak[]): void {
             const os = meta.operatingSystem || 'Système non précisé';
             const dateStr = item.breachDate ? formatDateFr(item.breachDate) : 'Date non précisée';
             return `
-              <div class="card darkweb-alert-card infostealer-card" style="background: rgba(239, 68, 68, 0.08); border-color: rgba(239, 68, 68, 0.35); margin-bottom: 0.75rem;">
+              <div class="card darkweb-alert-card infostealer-card">
                 <div class="card-header-flex">
                   <div>
                     <span class="badge badge-risk-critical">Infostealer critique</span>
-                    <strong style="margin-left: 0.5rem; color: var(--text-primary);">${escapeHtml(item.breachName)}</strong>
+                    <strong style="margin-left: 0.5rem;">${escapeHtml(item.breachName)}</strong>
                   </div>
                   <span class="badge badge-amber">${escapeHtml(family)}</span>
                 </div>
@@ -1328,11 +1328,11 @@ function renderDarkWebSubtab(leaks: UnifiedLeak[]): void {
                   ? 'Mode hors ligne'
                   : 'Passerelle Clearnet';
             return `
-              <div class="card darkweb-alert-card onion-card" style="background: rgba(139, 92, 246, 0.08); border-color: rgba(139, 92, 246, 0.35); margin-bottom: 0.75rem;">
+              <div class="card darkweb-alert-card onion-card">
                 <div class="card-header-flex">
                   <div>
                     <span class="badge badge-purple">Service caché .onion</span>
-                    <strong style="margin-left: 0.5rem; color: var(--text-primary);">${escapeHtml(item.breachName)}</strong>
+                    <strong style="margin-left: 0.5rem;">${escapeHtml(item.breachName)}</strong>
                   </div>
                   <span class="badge badge-blue">${escapeHtml(routingLabel)}</span>
                 </div>
@@ -1372,7 +1372,7 @@ function renderDarkWebSubtab(leaks: UnifiedLeak[]): void {
                     <tr>
                       <td><span class="badge badge-blue">${escapeHtml(String(b.sourceTool))}</span></td>
                       <td><span class="badge ${catBadge}">${catLabel}</span></td>
-                      <td><strong style="color: #f87171;">${escapeHtml(b.breachName)}</strong></td>
+                      <td><strong class="breach-title">${escapeHtml(b.breachName)}</strong></td>
                       <td><code>${escapeHtml(b.target)}</code></td>
                       <td>${(b.dataClasses || []).map((c) => `<span class="badge badge-purple">${escapeHtml(c)}</span>`).join(' ')}</td>
                       <td class="text-secondary" style="font-size: 0.8rem;">${escapeHtml(b.details)}</td>
@@ -1530,7 +1530,7 @@ function initComparatorView4(): void {
       showToast(`Erreur lors de la comparaison : ${err?.message || err}`, 'error');
     } finally {
       btnCompare.removeAttribute('disabled');
-      btnCompare.innerHTML = '<span>⚖️</span> Comparer les deux audits';
+      btnCompare.innerHTML = '<svg class="m3-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h5v2h2V1h-2v2zm0 15H5l5-6v6zm9-15h-5v2h5v13l-5-6v9h5c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z"/></svg> Comparer les deux audits';
     }
   });
 }
