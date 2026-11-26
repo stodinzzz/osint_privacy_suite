@@ -286,12 +286,30 @@ function initView1(): void {
   const toolCheckboxes = document.querySelectorAll<HTMLInputElement>('.tools-grid input[type="checkbox"]');
   const darkwebToggleBtns = document.querySelectorAll<HTMLButtonElement>('.darkweb-toggle-card');
 
+  const updateSelectedToolsCounter = () => {
+    const counterEl = document.getElementById('selected-tools-counter');
+    if (!counterEl) return;
+    let count = 0;
+    toolCheckboxes.forEach((cb) => {
+      if (cb.checked) count += 1;
+    });
+    darkwebToggleBtns.forEach((btn) => {
+      if (btn.classList.contains('active')) count += 1;
+    });
+    const label = count <= 1 ? 'module actif' : 'modules actifs';
+    counterEl.textContent = `${count} ${label}`;
+  };
+
+  toolCheckboxes.forEach((cb) => {
+    cb.addEventListener('change', updateSelectedToolsCounter);
+  });
+
   darkwebToggleBtns.forEach((btn) => {
     btn.addEventListener('click', () => {
       const isNowActive = !btn.classList.contains('active');
       btn.classList.toggle('active', isNowActive);
       btn.setAttribute('aria-pressed', isNowActive ? 'true' : 'false');
-      btn.style.opacity = isNowActive ? '1' : '0.5';
+      updateSelectedToolsCounter();
     });
   });
 
@@ -301,16 +319,34 @@ function initView1(): void {
       darkwebToggleBtns.forEach((btn) => {
         btn.classList.add('active');
         btn.setAttribute('aria-pressed', 'true');
-        btn.style.opacity = '1';
       });
+      updateSelectedToolsCounter();
     });
   }
 
   if (btnDeselectAll) {
     btnDeselectAll.addEventListener('click', () => {
       toolCheckboxes.forEach((cb) => (cb.checked = false));
+      updateSelectedToolsCounter();
     });
   }
+
+  // Allow pressing Enter in target fields to start scan immediately
+  ['input-email', 'input-username', 'input-phone'].forEach((id) => {
+    const field = document.getElementById(id);
+    if (field) {
+      field.addEventListener('keydown', (e: KeyboardEvent) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          if (btnStart && !btnStart.disabled) {
+            void startUnifiedScan();
+          }
+        }
+      });
+    }
+  });
+
+  updateSelectedToolsCounter();
 
   if (btnStart) {
     btnStart.addEventListener('click', async () => {
@@ -593,7 +629,7 @@ function getRiskLevelInfo(level?: RiskLevel | string): {
       return {
         label: 'Risque critique',
         shortLabel: 'Critique',
-        color: '#ef4444',
+        color: 'var(--md-sys-color-error)',
         badgeClass: 'badge-risk-critical',
         frenchBadgeClass: 'badge-risk-critique',
       };
@@ -601,7 +637,7 @@ function getRiskLevelInfo(level?: RiskLevel | string): {
       return {
         label: 'Risque élevé',
         shortLabel: 'Élevé',
-        color: '#f97316',
+        color: 'var(--md-sys-color-orange)',
         badgeClass: 'badge-risk-elevated',
         frenchBadgeClass: 'badge-risk-eleve',
       };
@@ -609,7 +645,7 @@ function getRiskLevelInfo(level?: RiskLevel | string): {
       return {
         label: 'Risque modéré',
         shortLabel: 'Modéré',
-        color: '#f59e0b',
+        color: 'var(--md-sys-color-warning)',
         badgeClass: 'badge-risk-moderate',
         frenchBadgeClass: 'badge-risk-moyen',
       };
@@ -618,7 +654,7 @@ function getRiskLevelInfo(level?: RiskLevel | string): {
       return {
         label: 'Risque faible',
         shortLabel: 'Faible',
-        color: '#10b981',
+        color: 'var(--md-sys-color-success)',
         badgeClass: 'badge-risk-low',
         frenchBadgeClass: 'badge-risk-faible',
       };

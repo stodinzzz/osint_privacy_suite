@@ -157,7 +157,7 @@ function createWindow(): void {
     minWidth: 380,
     minHeight: 480,
     show: !isHeadlessTest,
-    backgroundColor: '#090d16',
+    backgroundColor: '#111318',
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,

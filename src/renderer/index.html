@@ -60,13 +60,13 @@
     <!-- Conteneur principal des 4 vues -->
     <main class="main-content">
 
-      <!-- Barre de navigation superieure avec bascule de theme -->
+      <!-- Barre de navigation supérieure avec bascule de thème -->
       <header class="top-navbar">
         <div class="top-navbar-title-container">
-          <span class="top-navbar-app-name">Suite OSINT et Confidentialite</span>
+          <span class="top-navbar-app-name">Suite OSINT et Confidentialité</span>
         </div>
         <div class="top-navbar-actions">
-          <button id="theme-toggle" class="btn-theme-toggle" type="button" aria-label="Changer de theme" title="Changer de theme">
+          <button id="theme-toggle" class="btn-theme-toggle" type="button" aria-label="Changer de thème" title="Changer de thème">
             <span id="theme-toggle-icon" class="theme-icon">
               <!-- Icone Soleil par defaut pour basculer vers le mode clair -->
               <svg class="svg-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -89,16 +89,16 @@
       <!-- ================= VUE 1 : ACCUEIL ET LANCEMENT ================= -->
       <section id="view1" class="view-panel active">
         <header class="view-header">
-          <div>
+          <div class="view-header-title-group">
             <h1 class="view-title">Audit de présence numérique et assainissement</h1>
-            <p class="view-description">Renseignez vos identifiants pour exécuter en parallèle les 6 outils OSINT et cartographier vos comptes.</p>
+            <p class="view-description">Renseignez vos identifiants pour analyser en parallèle vos comptes publics, les brèches de données et le Dark Web.</p>
           </div>
         </header>
 
         <!-- Formulaire multi cibles -->
         <div class="card form-card">
           <h2 class="card-title">Cibles d'analyse simultanées</h2>
-          <div class="form-grid">
+          <div class="targets-form-grid">
             <div class="form-group">
               <label for="input-email" class="form-label">Adresse électronique</label>
               <div class="input-wrapper">
@@ -119,15 +119,15 @@
               </div>
             </div>
 
-            <div class="form-group">
+            <div class="form-group phone-form-group">
               <label for="input-phone" class="form-label">Numéro de téléphone</label>
               <div class="phone-input-wrapper">
-                <select id="select-phone-prefix" class="form-select prefix-select">
-                  <option value="+33" selected>+33 (France)</option>
-                  <option value="+32">+32 (Belgique)</option>
-                  <option value="+41">+41 (Suisse)</option>
-                  <option value="+1">+1 (Canada, USA)</option>
-                  <option value="+44">+44 (Royaume Uni)</option>
+                <select id="select-phone-prefix" class="form-select prefix-select" aria-label="Indicatif téléphonique">
+                  <option value="+33" selected>+33 FR</option>
+                  <option value="+32">+32 BE</option>
+                  <option value="+41">+41 CH</option>
+                  <option value="+1">+1 US/CA</option>
+                  <option value="+44">+44 UK</option>
                 </select>
                 <input type="tel" id="input-phone" class="form-input" placeholder="06 12 34 56 78">
               </div>
@@ -137,7 +137,10 @@
           <!-- Sélecteur d'outils -->
           <div class="tools-selector-section">
             <div class="section-header-flex">
-              <h3 class="subsection-title">Outils mobilisés</h3>
+              <div class="section-title-group">
+                <h3 class="subsection-title">Outils OSINT mobilisés</h3>
+                <span id="selected-tools-counter" class="badge badge-blue">9 modules actifs</span>
+              </div>
               <div class="selector-actions">
                 <button type="button" id="btn-select-all-tools" class="btn-link">Tout cocher</button>
                 <button type="button" id="btn-deselect-all-tools" class="btn-link">Tout décocher</button>
@@ -212,15 +215,18 @@
               </label>
             </div>
 
-            <div class="section-header-flex" style="margin-top: 1.25rem;">
+            <div class="section-header-flex" style="margin-top: 1rem;">
               <h3 class="subsection-title">Passerelles Dark Web, Infostealers et Brèches (simultanées)</h3>
             </div>
 
             <div class="darkweb-tools-grid">
               <button type="button" class="tool-checkbox-card darkweb-toggle-card active" id="tool-ahmia" data-tool="ahmia" aria-pressed="true">
+                <span class="darkweb-check-indicator" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                </span>
                 <div class="tool-card-content">
                   <div class="tool-card-header">
-                    <span class="tool-name">Ahmia (Tor &amp; Dark Web)</span>
+                    <span class="tool-name">Ahmia (Tor)</span>
                     <span class="badge badge-purple">Dark Web</span>
                   </div>
                   <p class="tool-desc">Recherche d'indexation sur les services cachés .onion du réseau Tor.</p>
@@ -228,19 +234,25 @@
               </button>
 
               <button type="button" class="tool-checkbox-card darkweb-toggle-card active" id="tool-xposedornot" data-tool="xposedornot" aria-pressed="true">
+                <span class="darkweb-check-indicator" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                </span>
                 <div class="tool-card-content">
                   <div class="tool-card-header">
                     <span class="tool-name">XposedOrNot</span>
-                    <span class="badge badge-red">Brèches &amp; Pastes</span>
+                    <span class="badge badge-red">Brèches</span>
                   </div>
-                  <p class="tool-desc">Analyse des bases de données compromises et des archives publiques Paste.</p>
+                  <p class="tool-desc">Analyse des bases compromises et des archives publiques Paste.</p>
                 </div>
               </button>
 
               <button type="button" class="tool-checkbox-card darkweb-toggle-card active" id="tool-hudsonrock" data-tool="hudsonrock" aria-pressed="true">
+                <span class="darkweb-check-indicator" aria-hidden="true">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                </span>
                 <div class="tool-card-content">
                   <div class="tool-card-header">
-                    <span class="tool-name">Hudson Rock Cavalier</span>
+                    <span class="tool-name">Hudson Rock</span>
                     <span class="badge badge-amber">Infostealers</span>
                   </div>
                   <p class="tool-desc">Détection d'infections par logiciels voleurs de sessions et jetons.</p>
@@ -251,14 +263,17 @@
 
           <!-- Commandes de lancement -->
           <div class="form-actions">
-            <button type="button" id="btn-start-scan" class="btn btn-primary btn-large">
-              <svg class="m3-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
-              Lancer l'audit global
-            </button>
-            <button type="button" id="btn-cancel-scan" class="btn btn-danger btn-large" style="display: none;">
-              <svg class="m3-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg>
-              Arrêt d'urgence
-            </button>
+            <div class="form-actions-left">
+              <button type="button" id="btn-start-scan" class="btn btn-primary btn-large">
+                <svg class="m3-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+                Lancer l'audit global
+              </button>
+              <button type="button" id="btn-cancel-scan" class="btn btn-danger btn-large" style="display: none;">
+                <svg class="m3-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6h12v12H6z"/></svg>
+                Arrêt d'urgence
+              </button>
+            </div>
+            <span class="form-actions-hint">Appuyez sur Entrée dans un champ pour lancer directement</span>
           </div>
         </div>
 
@@ -354,19 +369,39 @@
         <!-- Statistiques et jauge d'assainissement -->
         <div class="stats-grid">
           <div class="stat-card">
-            <span class="stat-label">Comptes découverts</span>
+            <div class="stat-card-top">
+              <span class="stat-label">Comptes découverts</span>
+              <span class="stat-icon-badge stat-icon-neutral" aria-hidden="true">
+                <svg class="m3-icon" viewBox="0 0 24 24"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+              </span>
+            </div>
             <span id="stat-total-accounts" class="stat-value">0</span>
           </div>
           <div class="stat-card">
-            <span class="stat-label">Facile ou Moyen</span>
+            <div class="stat-card-top">
+              <span class="stat-label">Facile ou Moyen</span>
+              <span class="stat-icon-badge stat-icon-success" aria-hidden="true">
+                <svg class="m3-icon" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+              </span>
+            </div>
             <span id="stat-easy-medium" class="stat-value text-emerald">0</span>
           </div>
           <div class="stat-card">
-            <span class="stat-label">Comptes assainis</span>
+            <div class="stat-card-top">
+              <span class="stat-label">Comptes assainis</span>
+              <span class="stat-icon-badge stat-icon-primary" aria-hidden="true">
+                <svg class="m3-icon" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/></svg>
+              </span>
+            </div>
             <span id="stat-processed" class="stat-value text-blue">0</span>
           </div>
           <div class="stat-card">
-            <span class="stat-label">Taux d'assainissement</span>
+            <div class="stat-card-top">
+              <span class="stat-label">Taux d'assainissement</span>
+              <span class="stat-icon-badge stat-icon-tertiary" aria-hidden="true">
+                <svg class="m3-icon" viewBox="0 0 24 24"><path d="M11 2v20c-5.07-.5-9-4.79-9-10s3.93-9.5 9-10zm2.03 0v8.99H22c-.47-4.74-4.24-8.52-8.97-8.99zm0 11.01V22c4.74-.47 8.5-4.25 8.97-8.99h-8.97z"/></svg>
+              </span>
+            </div>
             <span id="stat-sanitization-rate" class="stat-value text-purple">0%</span>
           </div>
         </div>
@@ -411,7 +446,7 @@
 
                 <div class="gauge-meta-summary">
                   <div class="meta-level-row">
-                    <span class="meta-label">Niveau d exposition :</span>
+                    <span class="meta-label">Niveau d'exposition :</span>
                     <span id="risk-level-badge" class="badge badge-risk-low badge-risk-faible">Risque faible</span>
                   </div>
 
@@ -440,13 +475,13 @@
             <!-- Colonne droite : Liste priorisée des recommandations d'assainissement -->
             <div class="risk-recommendations-column">
               <div class="card-header-compact section-header-flex">
-                <h3 class="subsection-title">Recommandations prioritaires d assainissement</h3>
+                <h3 class="subsection-title">Recommandations prioritaires d'assainissement</h3>
                 <span id="recommendations-count-badge" class="badge badge-blue">0 recommandation</span>
               </div>
 
               <div id="risk-recommendations-list" class="recommendations-container">
                 <div class="empty-recommendations-state">
-                  <p class="text-secondary">Aucune recommandation active. Vos comptes identifiés sont assainis ou aucune fuite n a été détectée.</p>
+                  <p class="text-secondary">Aucune recommandation active. Vos comptes identifiés sont assainis ou aucune fuite n'a été détectée.</p>
                 </div>
               </div>
             </div>
@@ -547,7 +582,11 @@
             <div class="card">
               <h2 class="card-title">Résultats détaillés Holehe</h2>
               <div id="holehe-results-container" class="results-container">
-                <p class="text-secondary">Aucune analyse Holehe disponible pour la session en cours.</p>
+                <div class="m3-empty-block">
+                  <span class="m3-empty-icon" aria-hidden="true"><svg class="m3-icon" viewBox="0 0 24 24"><path d="M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z"/></svg></span>
+                  <span class="m3-empty-title">Aucune analyse Holehe disponible</span>
+                  <p class="text-secondary">Lancez un audit depuis l'accueil avec une adresse électronique pour explorer les résultats.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -672,8 +711,8 @@
         <div class="card comparator-card" id="audit-comparator-panel">
           <div class="card-header-flex">
             <div>
-              <h2 class="card-title">Comparateur d audits chronologique</h2>
-              <p class="view-description" style="margin-top: 0.25rem;">Comparez deux analyses temporelles pour mesurer l évolution des expositions et l efficacité des suppressions.</p>
+              <h2 class="card-title">Comparateur d'audits chronologique</h2>
+              <p class="view-description" style="margin-top: 0.25rem;">Comparez deux analyses temporelles pour mesurer l'évolution des expositions et l'efficacité des suppressions.</p>
             </div>
           </div>
 
